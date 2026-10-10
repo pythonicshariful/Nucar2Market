@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Nucar → Facebook Marketplace Vehicle Poster
 // @namespace    https://nucar2market.local
-// @version      1.0.0
-// @description  Auto-fill Facebook Marketplace vehicle listings from Nucar inventory via Flask server
+// @version      1.3.1
+// @description  Auto-fill & batch-post Facebook Marketplace vehicle listings from Nucar inventory via Flask server
 // @author       Nucar2Market
 // @match        https://www.facebook.com/marketplace/create/vehicle*
+// @match        https://www.facebook.com/marketplace/you/selling*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @connect      127.0.0.1
@@ -17,11 +18,13 @@
 
     // ── CONFIG ────────────────────────────────────────────────────────────
     const FLASK_SERVER = 'http://127.0.0.1:5000';
-    const LOCATION_TEXT = 'Tilton, New Hampshire';  // ← Change this to your desired location
-    const MAX_IMAGES = 20;        // Maximum photos to upload (Facebook limit is typically 20)
+    let LOCATION_TEXT = 'Tilton, New Hampshire';  // Loaded dynamically from Flask /api/config
+    let MAX_IMAGES = 20;        // Maximum photos to upload (Facebook limit is typically 20)
     const FILL_DELAY = 800;       // ms between each field fill
     const IMAGE_DELAY = 2000;     // ms between each image upload
     const LOCATION_WAIT = 2500;   // ms to wait for location dropdown to appear
+    let POST_INTERVAL = 300000; // ms between auto-posts (default 5 minutes)
+    const CREATE_PAGE = 'https://www.facebook.com/marketplace/create/vehicle';
 
     // ── STYLES ────────────────────────────────────────────────────────────
     GM_addStyle(`
@@ -598,6 +601,259 @@
         return true;
     }
 
+    /** Click a button by aria-label or visible text (e.g. "Next" or "Publish") */
+    async function clickButtonByAriaLabel(label, timeoutMs = 15000) {
+        const startTime = Date.now();
+        updateStatus(`Looking for "${label}" button...`);
+
+        // Possible alternate labels for Publish/Next
+        const searchLabels = [label];
+        if (label.toLowerCase() === 'publish') {
+            searchLabels.push('Publish', 'Post', 'Submit', 'Share');
+        } else if (label.toLowerCase() === 'next') {
+            searchLabels.push('Next', 'Continue');
+        }
+
+        while (Date.now() - startTime < timeoutMs) {
+            let btn = null;
+
+            // Search by aria-label
+            for (const l of searchLabels) {
+                btn = document.querySelector(`div[aria-label="${l}"][role="button"], [aria-label="${l}"][role="button"], button[aria-label="${l}"], [aria-label="${l}"]`);
+                if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) break;
+            }
+
+            // Search by textContent
+            if (!btn) {
+                const candidates = document.querySelectorAll('[role="button"], button, div[tabindex="0"]');
+                for (const c of candidates) {
+                    if (c.offsetWidth === 0 || c.offsetHeight === 0) continue;
+                    const ariaLabel = (c.getAttribute('aria-label') || '').trim();
+                    const text = (c.textContent || '').trim();
+
+                    for (const l of searchLabels) {
+                        if (ariaLabel.toLowerCase() === l.toLowerCase() || text.toLowerCase() === l.toLowerCase()) {
+                            btn = c;
+                            break;
+                        }
+                    }
+                    if (btn) break;
+                }
+            }
+
+            if (btn && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+                const isDisabled = btn.getAttribute('aria-disabled') === 'true' ||
+                                   btn.disabled ||
+                                   btn.getAttribute('disabled') !== null;
+
+                if (isDisabled) {
+                    updateStatus(`⏳ Found "${label}" button, but it is currently disabled. Waiting for Facebook validation / uploads...`);
+                    await sleep(1000);
+                    continue; // Keep waiting until timeout
+                }
+
+                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                await sleep(400);
+
+                // Simulate human pointer and mouse sequence for React 18
+                try {
+                    btn.focus();
+                    btn.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, cancelable: true, view: window }));
+                    btn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
+                    btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window, isPrimary: true, button: 0 }));
+                    btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window, button: 0 }));
+                    await sleep(50);
+                    btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window, isPrimary: true, button: 0 }));
+                    btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window, button: 0 }));
+                    btn.click();
+
+                    // Also click inner span/div if present
+                    const inner = btn.querySelector('span, div[role="none"]');
+                    if (inner) inner.click();
+                } catch (e) {
+                    btn.click();
+                }
+
+                updateStatus(`✓ Clicked "${label}" button`, 'success');
+                return true;
+            }
+
+            await sleep(600);
+        }
+
+        updateStatus(`⚠ Could not find active "${label}" button within timeout`, 'warn');
+        return false;
+    }
+
+    // ── QUEUE STATE ─────────────────────────────────────────────────────────
+    let postQueue = [];       // Array of vehicle objects to post
+    let queueIndex = 0;       // Current position in queue
+    let queueRunning = false; // Is the auto-post queue active?
+    let queuePaused = false;  // Is the queue paused waiting for user to publish?
+
+    /** Mark a vehicle as posted in the Flask tracker */
+    async function trackPosted(vehicle) {
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: `${FLASK_SERVER}/api/track-posted`,
+                headers: { 'Content-Type': 'application/json' },
+                data: JSON.stringify({
+                    vin: vehicle.vin,
+                    title: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+                    price: vehicle.price,
+                    year: vehicle.year,
+                    make: vehicle.make,
+                    model: vehicle.model,
+                }),
+                onload: (resp) => {
+                    console.log('[N2M] Tracked posted:', resp.responseText);
+                    resolve(true);
+                },
+                onerror: () => resolve(false),
+            });
+        });
+    }
+
+    /** Load the posting queue (unposted vehicles) from Flask */
+    async function loadQueue() {
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: `${FLASK_SERVER}/api/queue`,
+                onload: (resp) => {
+                    try {
+                        const data = JSON.parse(resp.responseText);
+                        resolve(data.vehicles || []);
+                    } catch (e) {
+                        resolve([]);
+                    }
+                },
+                onerror: () => resolve([]),
+            });
+        });
+    }
+
+    /** Start the auto-post queue */
+    async function startQueue() {
+        postQueue = await loadQueue();
+        if (postQueue.length === 0) {
+            updateStatus('✅ No new vehicles to post! All caught up.', 'success');
+            return;
+        }
+        queueIndex = 0;
+        queueRunning = true;
+        queuePaused = false;
+        updateQueueUI();
+        updateStatus(`🚀 Queue started: ${postQueue.length} vehicles to post`);
+
+        // Navigate to create page if not already there
+        if (!window.location.href.includes('/marketplace/create/vehicle')) {
+            window.location.href = CREATE_PAGE;
+            // The script will re-init on the new page; store queue in sessionStorage
+            sessionStorage.setItem('n2m_queue', JSON.stringify(postQueue));
+            sessionStorage.setItem('n2m_queue_index', '0');
+            sessionStorage.setItem('n2m_queue_running', 'true');
+            return;
+        }
+
+        // Start filling the first vehicle
+        await processNextInQueue();
+    }
+
+    /** Process the next vehicle in the queue */
+    async function processNextInQueue() {
+        if (!queueRunning || queueIndex >= postQueue.length) {
+            queueRunning = false;
+            updateStatus(`✅ Queue complete! Posted ${queueIndex} vehicles.`, 'success');
+            updateQueueUI();
+            sessionStorage.removeItem('n2m_queue');
+            sessionStorage.removeItem('n2m_queue_index');
+            sessionStorage.removeItem('n2m_queue_running');
+            return;
+        }
+
+        const vehicle = postQueue[queueIndex];
+        selectedVehicle = vehicle;
+        updateStatus(`📦 Queue: ${queueIndex + 1}/${postQueue.length} — ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
+        renderVehicles();
+        updateQueueUI();
+
+        // Fill the form
+        await fillVehicleForm(vehicle);
+
+        // Track it as posted
+        await trackPosted(vehicle);
+
+        // Now wait for user to review and publish
+        queuePaused = true;
+        updateStatus(
+            `✅ Form filled! Review and click "Publish" on Facebook, then click "Next Vehicle" below.`,
+            'success'
+        );
+        updateQueueUI();
+    }
+
+    /** Move to next vehicle after user confirms they published */
+    async function advanceQueue() {
+        queuePaused = false;
+        queueIndex++;
+
+        // Save progress
+        sessionStorage.setItem('n2m_queue_index', String(queueIndex));
+
+        if (queueIndex >= postQueue.length) {
+            queueRunning = false;
+            updateStatus(`🎉 All ${postQueue.length} vehicles posted!`, 'success');
+            updateQueueUI();
+            sessionStorage.removeItem('n2m_queue');
+            sessionStorage.removeItem('n2m_queue_index');
+            sessionStorage.removeItem('n2m_queue_running');
+            return;
+        }
+
+        updateStatus(`⏳ Waiting ${POST_INTERVAL / 1000}s before next post...`);
+
+        // Navigate to fresh create page
+        await sleep(2000);
+        window.location.href = CREATE_PAGE;
+        // On reload, the queue will resume from sessionStorage
+    }
+
+    /** Stop the queue */
+    function stopQueue() {
+        queueRunning = false;
+        queuePaused = false;
+        postQueue = [];
+        queueIndex = 0;
+        sessionStorage.removeItem('n2m_queue');
+        sessionStorage.removeItem('n2m_queue_index');
+        sessionStorage.removeItem('n2m_queue_running');
+        updateStatus('Queue stopped.');
+        updateQueueUI();
+    }
+
+    /** Resume queue from sessionStorage (after page navigation) */
+    function resumeQueueIfNeeded() {
+        const savedQueue = sessionStorage.getItem('n2m_queue');
+        const savedIndex = sessionStorage.getItem('n2m_queue_index');
+        const savedRunning = sessionStorage.getItem('n2m_queue_running');
+
+        if (savedQueue && savedRunning === 'true') {
+            postQueue = JSON.parse(savedQueue);
+            queueIndex = parseInt(savedIndex || '0', 10);
+            queueRunning = true;
+            queuePaused = false;
+            updateQueueUI();
+
+            // Wait for page to fully load, then process next
+            setTimeout(async () => {
+                updateStatus(`🔄 Resuming queue: vehicle ${queueIndex + 1}/${postQueue.length}`);
+                await processNextInQueue();
+            }, 4000);
+        }
+    }
+
     // ── MAIN FILL FUNCTION ────────────────────────────────────────────────
 
     async function fillVehicleForm(vehicle) {
@@ -606,7 +862,7 @@
         setProgress(0);
 
         try {
-            const totalSteps = 15;
+            const totalSteps = 16;
             let step = 0;
 
             // 1. Vehicle Type
@@ -697,26 +953,73 @@
                 await sleep(FILL_DELAY);
             }
 
-            // 13. Price
+            // 13. Mileage
+            step++;
+            setProgress((step / totalSteps) * 100);
+            if (vehicle.mileage !== undefined && vehicle.mileage !== null) {
+                let mVal = parseInt(String(vehicle.mileage).replace(/,/g, ''), 10);
+                if (isNaN(mVal) || mVal < 300) {
+                    // Facebook requirement: "Please add mileage between 300 and 1,000,000"
+                    // Brand new vehicles (e.g. 6 or 10 miles) must be set to at least 300 to pass FB validation.
+                    mVal = 300;
+                    updateStatus(`ℹ Low mileage (${vehicle.mileage} mi); set to FB minimum 300`);
+                } else if (mVal > 1000000) {
+                    mVal = 1000000;
+                }
+                await fillTextField('Mileage', mVal);
+                await sleep(FILL_DELAY);
+            }
+
+            // 14. Price
             step++;
             setProgress((step / totalSteps) * 100);
             await fillTextField('Price', vehicle.price);
             await sleep(FILL_DELAY);
 
-            // 14. Location
+            // 15. Location
             step++;
             setProgress((step / totalSteps) * 100);
             await fillLocation(LOCATION_TEXT);
             await sleep(FILL_DELAY);
 
-            // 15. Description
+            // 16. Description
             step++;
             setProgress((step / totalSteps) * 100);
             await fillDescription(vehicle.description);
             await sleep(300);
 
             setProgress(100);
-            updateStatus('✅ All fields filled! Review and submit manually.', 'success');
+
+            // Save active vehicle info to sessionStorage so we track it when Facebook redirects to /marketplace/you/selling
+            sessionStorage.setItem('n2m_posting_vin', vehicle.vin);
+            sessionStorage.setItem('n2m_posting_title', `${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.trim || ''}`.trim());
+            sessionStorage.setItem('n2m_posting_price', String(vehicle.price || 0));
+
+            const autoPublish = document.getElementById('n2m-auto-publish-toggle')?.checked ?? true;
+            if (autoPublish) {
+                updateStatus('✅ All fields filled! Auto-publishing in 1.5s...', 'info');
+                await sleep(1500);
+
+                // Step A: Click "Next"
+                updateStatus('⏳ Clicking "Next" button...');
+                const nextClicked = await clickButtonByAriaLabel('Next', 10000);
+                if (nextClicked) {
+                    updateStatus('⏳ Review step loaded. Waiting for "Publish" button...');
+                    await sleep(2500);
+
+                    // Step B: Click "Publish"
+                    const publishClicked = await clickButtonByAriaLabel('Publish', 15000);
+                    if (publishClicked) {
+                        updateStatus('🚀 Clicked "Publish"! Waiting for Facebook confirmation & redirect...', 'success');
+                    } else {
+                        updateStatus('⚠ "Publish" button not found. Please click Publish manually.', 'warn');
+                    }
+                } else {
+                    updateStatus('⚠ "Next" button not found. Please click Next manually.', 'warn');
+                }
+            } else {
+                updateStatus('✅ All fields filled! Review and submit manually.', 'success');
+            }
         } catch (err) {
             console.error('[N2M] Error filling form:', err);
             updateStatus(`❌ Error: ${err.message}`, 'error');
@@ -767,15 +1070,36 @@
                 <div class="status-text" id="n2m-status-text">
                     Connecting to Flask server...
                 </div>
-                <div style="margin: 8px 0; display: flex; align-items: center; justify-content: space-between; font-size: 12px; background: #1a1a2e; padding: 6px 10px; border-radius: 6px;">
+                <div style="margin: 8px 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; background: #1a1a2e; padding: 8px 10px; border-radius: 6px;">
                     <label style="display:flex; align-items:center; gap:8px; cursor:pointer;" title="Check or uncheck 'This vehicle has a clean title.' on Facebook">
                         <input type="checkbox" id="n2m-clean-title-toggle" checked style="accent-color: #e94560; width: 15px; height: 15px; cursor: pointer;" />
                         <span>This vehicle has a clean title</span>
                     </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;" title="Automatically click Next & Publish, confirm success on selling page, and loop to next vehicle">
+                        <input type="checkbox" id="n2m-auto-publish-toggle" checked style="accent-color: #4ecca3; width: 15px; height: 15px; cursor: pointer;" />
+                        <span style="color:#4ecca3; font-weight:600;">⚡ Auto-Click Next & Publish</span>
+                    </label>
+                </div>
+                <div id="n2m-stats-bar" style="display:flex; gap:6px; margin-bottom:8px; font-size:11px;">
+                    <span style="background:#0f3460; padding:3px 8px; border-radius:4px;" id="n2m-stat-total">Total: ...</span>
+                    <span style="background:#1b5e20; padding:3px 8px; border-radius:4px;" id="n2m-stat-posted">✅ Posted: 0</span>
+                    <span style="background:#b71c1c; padding:3px 8px; border-radius:4px;" id="n2m-stat-unposted">📦 Queue: 0</span>
+                    <span style="background:#4a148c; padding:3px 8px; border-radius:4px;" id="n2m-stat-sold">💰 Sold: 0</span>
                 </div>
                 <button class="n2m-btn n2m-btn-fill" id="n2m-fill-btn" disabled>
                     Select a vehicle to fill form
                 </button>
+                <div id="n2m-queue-controls" style="display:flex; gap:6px; margin-top:8px;">
+                    <button class="n2m-btn" id="n2m-post-all-btn" style="flex:1; background:linear-gradient(135deg, #1b5e20, #2e7d32); color:white; font-size:12px;">
+                        🚀 Post All New
+                    </button>
+                    <button class="n2m-btn" id="n2m-next-btn" style="flex:1; background:linear-gradient(135deg, #0f3460, #1565c0); color:white; font-size:12px; display:none;">
+                        ➡️ Next Vehicle
+                    </button>
+                    <button class="n2m-btn" id="n2m-stop-btn" style="flex:0.5; background:#b71c1c; color:white; font-size:12px; display:none;">
+                        ⏹ Stop
+                    </button>
+                </div>
                 <div class="n2m-progress">
                     <div class="n2m-progress-bar" id="n2m-progress-bar"></div>
                 </div>
@@ -812,27 +1136,145 @@
                 fillVehicleForm(selectedVehicle);
             }
         });
+
+        document.getElementById('n2m-post-all-btn').addEventListener('click', () => {
+            startQueue();
+        });
+
+        document.getElementById('n2m-next-btn').addEventListener('click', () => {
+            advanceQueue();
+        });
+
+        document.getElementById('n2m-stop-btn').addEventListener('click', () => {
+            stopQueue();
+        });
+
+        // Load stats
+        loadStats();
     }
 
+    let currentStatusText = 'Idle';
+    let currentProgressPct = 0;
+
     function updateStatus(text, type = 'info') {
+        currentStatusText = text;
         const el = document.getElementById('n2m-status-text');
-        if (!el) return;
+        if (el) {
+            const colors = {
+                info: '#e0e0e0',
+                success: '#4ecca3',
+                warn: '#ffc107',
+                error: '#e94560'
+            };
 
-        const colors = {
-            info: '#e0e0e0',
-            success: '#4ecca3',
-            warn: '#ffc107',
-            error: '#e94560'
-        };
-
-        el.style.color = colors[type] || colors.info;
-        el.innerHTML = text;
+            el.style.color = colors[type] || colors.info;
+            el.innerHTML = text;
+        }
         console.log(`[N2M] ${text}`);
+
+        // Forward log to Flask dashboard live terminal
+        try {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url: `${FLASK_SERVER}/api/bot/log`,
+                headers: { 'Content-Type': 'application/json' },
+                data: JSON.stringify({
+                    level: type,
+                    message: String(text).replace(/<[^>]+>/g, '')
+                })
+            });
+        } catch (e) {}
     }
 
     function setProgress(pct) {
+        currentProgressPct = pct;
         const bar = document.getElementById('n2m-progress-bar');
         if (bar) bar.style.width = `${Math.min(100, pct)}%`;
+    }
+
+    // ── FLASK DASHBOARD COMMAND LISTENER & HEARTBEAT ───────────────────────
+    let heartbeatInterval = null;
+
+    function startHeartbeatLoop() {
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+        async function sendHeartbeat() {
+            try {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: `${FLASK_SERVER}/api/bot/heartbeat`,
+                    headers: { 'Content-Type': 'application/json' },
+                    data: JSON.stringify({
+                        status: queueRunning ? (queuePaused ? 'waiting_for_publish' : 'filling') : (selectedVehicle ? 'ready' : 'idle'),
+                        current_step: String(currentStatusText).replace(/<[^>]+>/g, ''),
+                        progress: currentProgressPct,
+                        current_vehicle: selectedVehicle ? {
+                            vin: selectedVehicle.vin,
+                            title: `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`,
+                            price: selectedVehicle.price
+                        } : null
+                    }),
+                    onload: async (resp) => {
+                        try {
+                            const data = JSON.parse(resp.responseText);
+                            if (data.command) {
+                                await handleRemoteCommand(data.command);
+                            }
+                        } catch (e) {}
+                    }
+                });
+            } catch (err) {}
+        }
+
+        // Send initial ping, then poll every 1500ms
+        sendHeartbeat();
+        heartbeatInterval = setInterval(sendHeartbeat, 1500);
+    }
+
+    async function handleRemoteCommand(cmd) {
+        console.log('[N2M] Received remote command from Dashboard:', cmd);
+        updateStatus(`⚡ Received Dashboard Command: ${cmd.type}`, 'info');
+
+        switch (cmd.type) {
+            case 'FILL_VEHICLE':
+                if (cmd.vin) {
+                    let vehicle = currentVehicles.find(v => v.vin === cmd.vin);
+                    if (!vehicle) {
+                        try {
+                            const res = await new Promise(resolve => {
+                                GM_xmlhttpRequest({
+                                    method: 'GET',
+                                    url: `${FLASK_SERVER}/api/vehicle/${cmd.vin}`,
+                                    onload: r => resolve(JSON.parse(r.responseText))
+                                });
+                            });
+                            vehicle = res;
+                        } catch (e) {}
+                    }
+                    if (vehicle) {
+                        selectedVehicle = vehicle;
+                        renderVehicles();
+                        await fillVehicleForm(vehicle);
+                        await trackPosted(vehicle);
+                    }
+                }
+                break;
+
+            case 'START_QUEUE':
+                await startQueue();
+                break;
+
+            case 'NEXT_VEHICLE':
+                await advanceQueue();
+                break;
+
+            case 'STOP_QUEUE':
+                stopQueue();
+                break;
+
+            default:
+                console.warn('[N2M] Unknown command:', cmd);
+        }
     }
 
     function renderVehicles() {
@@ -846,7 +1288,10 @@
             card.innerHTML = `
                 <img src="${v.thumbnail || ''}" alt="${v.make} ${v.model}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2270%22 height=%2252%22><rect fill=%22%23333%22 width=%2270%22 height=%2252%22/><text fill=%22%23888%22 x=%2210%22 y=%2230%22 font-size=%2210%22>No img</text></svg>'" />
                 <div class="n2m-card-info">
-                    <div class="n2m-card-title">${v.year} ${v.make} ${v.model} ${v.trim || ''}</div>
+                    <div class="n2m-card-title">
+                        ${v.posted ? '<span style="color:#4ecca3; font-size:10px;">✅</span> ' : ''}
+                        ${v.year} ${v.make} ${v.model} ${v.trim || ''}
+                    </div>
                     <div class="n2m-card-meta">
                         VIN: ${v.vin?.substring(v.vin.length - 6) || '?'} · ${v.body_style || v.body_type || ''} · ${v.exterior_color || v.raw_exterior_color || ''} · ${v.mileage?.toLocaleString() || '?'} mi
                     </div>
@@ -869,6 +1314,74 @@
         document.getElementById('n2m-page-info').textContent = `Page ${currentPage}/${totalPages}`;
         document.getElementById('n2m-prev').disabled = currentPage <= 1;
         document.getElementById('n2m-next').disabled = currentPage >= totalPages;
+    }
+
+    function updateQueueUI() {
+        const postAllBtn = document.getElementById('n2m-post-all-btn');
+        const nextBtn = document.getElementById('n2m-next-btn');
+        const stopBtn = document.getElementById('n2m-stop-btn');
+
+        if (!postAllBtn) return;
+
+        if (queueRunning) {
+            postAllBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+            nextBtn.style.display = queuePaused ? 'block' : 'none';
+            if (queuePaused) {
+                nextBtn.textContent = queueIndex + 1 < postQueue.length
+                    ? `➡️ Next (${queueIndex + 2}/${postQueue.length})`
+                    : '✅ Finish Queue';
+            }
+        } else {
+            postAllBtn.style.display = 'block';
+            nextBtn.style.display = 'none';
+            stopBtn.style.display = 'none';
+        }
+    }
+
+    function loadStats() {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: `${FLASK_SERVER}/api/stats`,
+            onload: (resp) => {
+                try {
+                    const s = JSON.parse(resp.responseText);
+                    const el = (id) => document.getElementById(id);
+                    if (el('n2m-stat-total')) el('n2m-stat-total').textContent = `Total: ${s.total_inventory}`;
+                    if (el('n2m-stat-posted')) el('n2m-stat-posted').textContent = `✅ Posted: ${s.total_posted}`;
+                    if (el('n2m-stat-unposted')) el('n2m-stat-unposted').textContent = `📦 Queue: ${s.total_unposted}`;
+                    if (el('n2m-stat-sold')) el('n2m-stat-sold').textContent = `💰 Sold: ${s.total_sold}`;
+                    // Update Post All button text
+                    const postAllBtn = document.getElementById('n2m-post-all-btn');
+                    if (postAllBtn && !queueRunning) {
+                        postAllBtn.textContent = `🚀 Post All New (${s.total_unposted})`;
+                    }
+                    // Also load remote settings
+                    loadRemoteConfig();
+                } catch (e) {
+                    console.warn('[N2M] Failed to load stats:', e);
+                }
+            },
+        });
+    }
+
+    function loadRemoteConfig() {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: `${FLASK_SERVER}/api/config`,
+            onload: (resp) => {
+                try {
+                    const cfg = JSON.parse(resp.responseText);
+                    if (cfg.fb_location) LOCATION_TEXT = cfg.fb_location;
+                    if (cfg.max_images) MAX_IMAGES = cfg.max_images;
+                    if (cfg.post_interval_seconds) POST_INTERVAL = cfg.post_interval_seconds * 1000;
+                    if (cfg.clean_title !== undefined) {
+                        const toggle = document.getElementById('n2m-clean-title-toggle');
+                        if (toggle) toggle.checked = cfg.clean_title;
+                    }
+                } catch (e) {}
+            }
+        });
     }
 
     function loadVehicles() {
@@ -900,16 +1413,136 @@
         });
     }
 
+    // ── HANDLE REDIRECT TO /marketplace/you/selling ───────────────────────
+    async function handleSellingRedirect() {
+        const postingVin = sessionStorage.getItem('n2m_posting_vin');
+        const postingTitle = sessionStorage.getItem('n2m_posting_title') || 'Vehicle';
+        const postingPrice = sessionStorage.getItem('n2m_posting_price') || 0;
+        const isQueue = sessionStorage.getItem('n2m_queue_running') === 'true';
+
+        console.log('[N2M] Detected Facebook Marketplace Selling page. Successful publish!');
+
+        // Create overlay notification banner
+        const banner = document.createElement('div');
+        banner.style.cssText = `
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 999999;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        `;
+        banner.innerHTML = `
+            <span style="font-size: 24px;">🎉</span>
+            <div>
+                <div>Published Successfully!</div>
+                <div style="font-size: 12px; font-weight: normal; opacity: 0.9;">${postingTitle} (${postingVin || ''})</div>
+                <div id="n2m-redirect-timer" style="font-size: 11px; margin-top: 4px; opacity: 0.85;">Returning to vehicle creator in 3s...</div>
+            </div>
+        `;
+        document.body.appendChild(banner);
+
+        // 1. Mark as posted in Flask
+        if (postingVin) {
+            await trackPosted({
+                vin: postingVin,
+                title: postingTitle,
+                price: postingPrice
+            });
+
+            // Send live log to Flask dashboard
+            try {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: `${FLASK_SERVER}/api/bot/log`,
+                    headers: { 'Content-Type': 'application/json' },
+                    data: JSON.stringify({
+                        level: 'success',
+                        message: `🎉 Facebook confirmed listing! Successfully published ${postingTitle} (VIN: ${postingVin})`
+                    })
+                });
+            } catch (e) {}
+
+            sessionStorage.removeItem('n2m_posting_vin');
+            sessionStorage.removeItem('n2m_posting_title');
+            sessionStorage.removeItem('n2m_posting_price');
+        }
+
+        // 2. Check Queue progression
+        if (isQueue) {
+            const savedQueue = sessionStorage.getItem('n2m_queue');
+            let qIdx = parseInt(sessionStorage.getItem('n2m_queue_index') || '0', 10);
+            qIdx++;
+            sessionStorage.setItem('n2m_queue_index', String(qIdx));
+
+            let queueItems = [];
+            try { queueItems = JSON.parse(savedQueue) || []; } catch (e) {}
+
+            if (qIdx < queueItems.length) {
+                const nextCar = queueItems[qIdx];
+                const nextTitle = nextCar ? `${nextCar.year} ${nextCar.make} ${nextCar.model}` : `Vehicle ${qIdx + 1}`;
+                const timerEl = document.getElementById('n2m-redirect-timer');
+                if (timerEl) timerEl.textContent = `Queue progress: ${qIdx}/${queueItems.length}. Next up: ${nextTitle}. Loading in 3s...`;
+
+                await sleep(3000);
+                window.location.href = CREATE_PAGE;
+            } else {
+                const timerEl = document.getElementById('n2m-redirect-timer');
+                if (timerEl) timerEl.textContent = `All ${queueItems.length} vehicles published! Done.`;
+                sessionStorage.removeItem('n2m_queue');
+                sessionStorage.removeItem('n2m_queue_index');
+                sessionStorage.removeItem('n2m_queue_running');
+
+                try {
+                    GM_xmlhttpRequest({
+                        method: 'POST',
+                        url: `${FLASK_SERVER}/api/bot/log`,
+                        headers: { 'Content-Type': 'application/json' },
+                        data: JSON.stringify({
+                            level: 'success',
+                            message: `🏆 All queued vehicles published successfully!`
+                        })
+                    });
+                } catch (e) {}
+
+                await sleep(3500);
+                window.location.href = CREATE_PAGE;
+            }
+        } else {
+            // Single post complete, return to create page
+            await sleep(3000);
+            window.location.href = CREATE_PAGE;
+        }
+    }
+
     // ── INIT ──────────────────────────────────────────────────────────────
 
     function init() {
-        console.log('[N2M] Nucar → Marketplace script loaded');
+        const currentUrl = window.location.href;
+        console.log('[N2M] Nucar → Marketplace script loaded on:', currentUrl);
 
-        // Wait a bit for FB page to fully render
-        setTimeout(() => {
-            createPanel();
-            loadVehicles();
-        }, 2000);
+        if (currentUrl.includes('/marketplace/you/selling')) {
+            setTimeout(handleSellingRedirect, 1000);
+            return;
+        }
+
+        if (currentUrl.includes('/marketplace/create/vehicle')) {
+            setTimeout(() => {
+                createPanel();
+                loadVehicles();
+                startHeartbeatLoop();
+                setTimeout(() => resumeQueueIfNeeded(), 2000);
+            }, 2000);
+        }
     }
 
     // Run

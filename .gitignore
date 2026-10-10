@@ -30,6 +30,7 @@ venv.bak/
 
 # Project-specific caches & downloads
 .image_cache/
+posted_vehicles.json
 *.log
 
 # Environment variables & secrets

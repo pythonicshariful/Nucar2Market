@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nucar2Market — Control Center & Live Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #07090e;
+            --bg-nav: rgba(13, 17, 28, 0.88);
+            --bg-card: #101626;
+            --bg-card-hover: #161f36;
+            --bg-input: #0b0f1a;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.25);
+            --emerald: #10b981;
+            --emerald-glow: rgba(16, 185, 129, 0.25);
+            --amber: #f59e0b;
+            --amber-glow: rgba(245, 158, 11, 0.25);
+            --rose: #ef4444;
+            --rose-glow: rgba(239, 68, 68, 0.25);
+            --purple: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.5;
+            background-image: 
+                radial-gradient(circle at 15% 5%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 15%, rgba(139, 92, 246, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        /* ── Top Bar ─────────────────────────────────────────── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(16px);
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 16px var(--primary-glow);
+        }
+
+        .brand-text h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-text p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .status-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.9); }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.825rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            box-shadow: 0 2px 10px var(--primary-glow);
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-emerald {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: white;
+            box-shadow: 0 2px 10px var(--emerald-glow);
+        }
+        .btn-emerald:hover {
+            background: linear-gradient(135deg, #10b981, #059669);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px var(--emerald-glow);
+        }
+
+        .btn-rose {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .btn-rose:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+        }
+
+        /* ── Main Container ──────────────────────────────────── */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* ── KPI Cards ───────────────────────────────────────── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-card);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .kpi-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .kpi-card.emerald::before { background: linear-gradient(90deg, #10b981, #34d399); }
+        .kpi-card.amber::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .kpi-card.rose::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+        .kpi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .kpi-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .kpi-icon {
+            font-size: 1.25rem;
+        }
+
+        .kpi-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.1;
+        }
+
+        .kpi-sub {
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Tabs Navigation ─────────────────────────────────── */
+        .tabs-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .tab-badge {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+        }
+
+        .tab-btn.active .tab-badge {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Filter / Action Toolbar ─────────────────────────── */
+        .toolbar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            padding: 8px 12px 8px 36px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .search-box .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .select-filter {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            padding: 8px 12px;
+            font-size: 0.825rem;
+            outline: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .select-filter:focus {
+            border-color: var(--primary);
+        }
+
+        .segmented-filter {
+            display: inline-flex;
+            background: var(--bg-input);
+            padding: 3px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .segmented-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 5px 12px;
+            font-size: 0.775rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .segmented-btn.active {
+            background: var(--bg-card-hover);
+            color: var(--text-main);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        /* ── Vehicle Cards Grid ──────────────────────────────── */
+        .vehicle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .vehicle-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .vehicle-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.6);
+        }
+
+        .card-image-wrap {
+            position: relative;
+            width: 100%;
+            height: 190px;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .card-image-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .vehicle-card:hover .card-image-wrap img {
+            transform: scale(1.03);
+        }
+
+        .badge-status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            backdrop-filter: blur(8px);
+            z-index: 2;
+        }
+
+        .badge-posted {
+            background: rgba(16, 185, 129, 0.85);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 8px var(--emerald-glow);
+        }
+
+        .badge-unposted {
+            background: rgba(15, 23, 42, 0.85);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .badge-photos {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.75);
+            color: #e2e8f0;
+            backdrop-filter: blur(4px);
+            z-index: 2;
+        }
+
+        .card-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 10px;
+        }
+
+        .card-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+
+        .card-price {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #38bdf8;
+            white-space: nowrap;
+        }
+
+        .card-meta-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        .meta-chip {
+            padding: 3px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            font-size: 0.725rem;
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .card-footer {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        /* ── Pagination ──────────────────────────────────────── */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 16px;
+        }
+
+        .page-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ── Auto-Post Queue View ────────────────────────────── */
+        .queue-hero {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .queue-hero-text h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .queue-hero-text p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            max-width: 650px;
+        }
+
+        .queue-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .table-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-muted);
+            padding: 12px 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            font-size: 0.725rem;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .table-vehicle-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .table-thumb {
+            width: 48px;
+            height: 36px;
+            border-radius: 4px;
+            object-fit: cover;
+            background: #222;
+        }
+
+        /* ── Live Bot Console & Controls ─────────────────────── */
+        .bot-control-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .bot-terminal {
+            background: #05070c;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 0.825rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-card);
+            height: 520px;
+        }
+
+        .terminal-header {
+            background: #0d121f;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .terminal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .terminal-logs {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: #05070c;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .log-time {
+            color: #475569;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .log-msg {
+            color: #cbd5e1;
+        }
+        .log-msg.info { color: #94a3b8; }
+        .log-msg.success { color: #34d399; }
+        .log-msg.warn { color: #fbbf24; }
+        .log-msg.error { color: #f87171; }
+
+        /* ── Sold Alert View ─────────────────────────────────── */
+        .sold-hero {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.08));
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .sold-hero h2 {
+            font-family: 'Outfit', sans-serif;
+            color: #f87171;
+            font-size: 1.35rem;
+            margin-bottom: 6px;
+        }
+
+        .sold-hero p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            max-width: 700px;
+        }
+
+        /* ── Settings Form ───────────────────────────────────── */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .settings-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .settings-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            padding: 9px 12px;
+            font-size: 0.875rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .form-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: var(--text-main);
+        }
+
+        .form-checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* ── Modal ───────────────────────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-xl);
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 10;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px;
+        }
+
+        .modal-close:hover {
+            color: var(--text-main);
+        }
+
+        .modal-body {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Gallery in Modal */
+        .gallery-main {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            background: #000;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gallery-main img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .gallery-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: var(--transition);
+        }
+
+        .gallery-nav-btn:hover {
+            background: rgba(0,0,0,0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .gallery-prev { left: 16px; }
+        .gallery-next { right: 16px; }
+
+        .gallery-thumbs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 6px 0;
+        }
+
+        .gallery-thumb {
+            width: 72px;
+            height: 52px;
+            border-radius: 6px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: 0.6;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .gallery-thumb.active, .gallery-thumb:hover {
+            opacity: 1;
+            border-color: var(--primary);
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            background: rgba(0,0,0,0.25);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .spec-item {
+            font-size: 0.8rem;
+        }
+
+        .spec-label {
+            color: var(--text-dim);
+            font-size: 0.725rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .spec-value {
+            color: var(--text-main);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .desc-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* ── Toast Notifications ─────────────────────────────── */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: #182238;
+            border: 1px solid var(--border-hover);
+            color: white;
+            padding: 12px 18px;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            animation: slideIn 0.25s ease-out;
+            min-width: 280px;
+        }
+
+        .toast.success { border-left: 4px solid var(--emerald); }
+        .toast.error { border-left: 4px solid var(--rose); }
+        .toast.info { border-left: 4px solid var(--primary); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            header { padding: 12px 16px; flex-wrap: wrap; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">🚗</div>
+            <div class="brand-text">
+                <h1>Nucar2Market <span style="font-size:0.75rem; font-weight:600; color:var(--primary); background:rgba(59,130,246,0.15); padding:2px 8px; border-radius:9999px;">CONTROL CENTER</span></h1>
+                <p id="store-subtitle">Nucar Automall of Tilton, NH • Live Command & Automation</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <!-- Server Status -->
+            <div class="status-badge" id="server-status-pill" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399;">
+                <span class="status-pulse" style="background:#34d399; box-shadow:0 0 8px #34d399;"></span>
+                <span>Server :5000</span>
+            </div>
+
+            <!-- Tampermonkey Bot Status -->
+            <div class="status-badge" id="bot-status-pill" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted);" title="Tampermonkey script connection on Facebook tab">
+                <span class="status-pulse" id="bot-pulse" style="background:#64748b;"></span>
+                <span id="bot-status-text">⚪ FB Bot Offline</span>
+            </div>
+
+            <button class="btn btn-secondary btn-sm" id="btn-sync-inventory" title="Download latest live inventory from CarsCommerce API">
+                <span id="sync-spinner" style="display:none;" class="spinner"></span>
+                <span id="sync-icon">🔄</span>
+                <span id="sync-btn-text">Sync Live</span>
+            </button>
+
+            <a href="https://www.facebook.com/marketplace/create/vehicle" target="_blank" class="btn btn-primary btn-sm" id="btn-open-marketplace">
+                <span>🚀 Open FB Tab</span>
+            </a>
+
+            <button class="btn btn-secondary btn-sm" id="btn-script-modal" title="Tampermonkey script install & guide">
+                <span>🧩 Script</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card blue">
+                <div class="kpi-header">
+                    <span class="kpi-title">Total Inventory</span>
+                    <span class="kpi-icon">🚗</span>
+                </div>
+                <div class="kpi-value" id="kpi-total">...</div>
+                <div class="kpi-sub" id="kpi-total-sub">Nucar Automall of Tilton</div>
+            </div>
+
+            <div class="kpi-card emerald">
+                <div class="kpi-header">
+                    <span class="kpi-title">Posted on Facebook</span>
+                    <span class="kpi-icon">✅</span>
+                </div>
+                <div class="kpi-value" id="kpi-posted">0</div>
+                <div class="kpi-sub" id="kpi-posted-sub">Active Marketplace Listings</div>
+            </div>
+
+            <div class="kpi-card amber">
+                <div class="kpi-header">
+                    <span class="kpi-title">Queue to Post</span>
+                    <span class="kpi-icon">📦</span>
+                </div>
+                <div class="kpi-value" id="kpi-unposted">...</div>
+                <div class="kpi-sub" id="kpi-unposted-sub">Ready for automated listing</div>
+            </div>
+
+            <div class="kpi-card rose">
+                <div class="kpi-header">
+                    <span class="kpi-title">Sold / Action Needed</span>
+                    <span class="kpi-icon">⚠️</span>
+                </div>
+                <div class="kpi-value" id="kpi-sold">0</div>
+                <div class="kpi-sub" id="kpi-sold-sub">Delisted from Nucar inventory</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="tab-inventory">
+                <span>🚘 Inventory Explorer</span>
+                <span class="tab-badge" id="tab-badge-inventory">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-bot-console">
+                <span>📺 Live Bot Console & Controls</span>
+                <span class="tab-badge" id="tab-badge-bot-live" style="background:rgba(59,130,246,0.2); color:#60a5fa;">Idle</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-queue">
+                <span>🚀 Auto-Post Queue</span>
+                <span class="tab-badge" id="tab-badge-queue">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-sold">
+                <span>⚠️ Sold Vehicles Alert</span>
+                <span class="tab-badge" id="tab-badge-sold" style="background:rgba(239,68,68,0.2); color:#f87171;">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-settings">
+                <span>⚙️ Configuration</span>
+            </button>
+        </nav>
+
+        <!-- TAB 1: Inventory Explorer -->
+        <section id="tab-inventory" class="tab-content active">
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Search by make, model, year, VIN, stock #..." />
+                </div>
+
+                <div class="filter-group">
+                    <div class="segmented-filter">
+                        <button class="segmented-btn active" data-status="all">All</button>
+                        <button class="segmented-btn" data-status="unposted">📦 Unposted</button>
+                        <button class="segmented-btn" data-status="posted">✅ Posted</button>
+                    </div>
+
+                    <select class="select-filter" id="filter-body-style">
+                        <option value="">All Body Styles</option>
+                        <option value="SUV">SUV</option>
+                        <option value="Sedan">Sedan</option>
+                        <option value="Truck">Truck</option>
+                        <option value="Van">Van / Minivan</option>
+                        <option value="Coupe">Coupe</option>
+                        <option value="Hatchback">Hatchback</option>
+                        <option value="Convertible">Convertible</option>
+                    </select>
+
+                    <select class="select-filter" id="filter-sort">
+                        <option value="year_desc">Sort: Newest Year</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                        <option value="mileage_asc">Lowest Mileage</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Vehicles Grid -->
+            <div class="vehicle-grid" id="vehicles-container"></div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <button class="btn btn-secondary btn-sm" id="btn-prev-page" disabled>◀ Prev</button>
+                <span class="page-info" id="pagination-info">Page 1 of 1</span>
+                <button class="btn btn-secondary btn-sm" id="btn-next-page">Next ▶</button>
+            </div>
+        </section>
+
+        <!-- TAB 2: Live Bot Console & Controls -->
+        <section id="tab-bot-console" class="tab-content">
+            <div class="bot-control-bar">
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px;">
+                    <div>
+                        <h2 style="font-family:'Outfit',sans-serif; font-size:1.35rem; margin-bottom:4px;">
+                            📺 Facebook Automation Remote Control
+                        </h2>
+                        <div id="bot-active-vehicle-title" style="font-size:0.875rem; color:var(--text-muted);">
+                            Status: <span id="bot-live-status-lbl" style="font-weight:600; color:#38bdf8;">Idle — Ready for command</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-emerald" id="btn-bot-start-queue">
+                            ▶️ Start Auto-Post Queue
+                        </button>
+                        <button class="btn btn-primary" id="btn-bot-next-vehicle">
+                            ⏭️ Advance Next Vehicle
+                        </button>
+                        <button class="btn btn-rose" id="btn-bot-stop-queue">
+                            ⏹️ Stop Queue
+                        </button>
+                        <a href="https://www.facebook.com/marketplace/create/vehicle" target="_blank" class="btn btn-secondary">
+                            ↗️ Open FB Tab
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Form Filling Progress Bar -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-dim); margin-bottom:6px;">
+                        <span id="bot-live-step-text" style="color:#94a3b8; font-weight:500;">Ready</span>
+                        <span id="bot-live-pct-text" style="color:#38bdf8; font-weight:700;">0%</span>
+                    </div>
+                    <div style="height:8px; background:rgba(255,255,255,0.06); border-radius:9999px; overflow:hidden;">
+                        <div id="bot-live-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #3b82f6, #10b981); transition:width 0.3s ease;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal Stream Box -->
+            <div class="bot-terminal">
+                <div class="terminal-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div class="terminal-dots">
+                            <span class="terminal-dot" style="background:#ef4444;"></span>
+                            <span class="terminal-dot" style="background:#f59e0b;"></span>
+                            <span class="terminal-dot" style="background:#10b981;"></span>
+                        </div>
+                        <span style="font-weight:600; color:var(--text-muted); font-size:0.75rem;">LIVE BOT STREAM — TAMPERMONKEY ↔ FLASK</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary btn-sm" id="btn-toggle-autoscroll" style="padding:3px 10px; font-size:0.7rem;">
+                            Auto-scroll: ON
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btn-clear-terminal" style="padding:3px 10px; font-size:0.7rem;">
+                            🧹 Clear Logs
+                        </button>
+                    </div>
+                </div>
+                <div class="terminal-logs" id="terminal-logs-container">
+                    <div class="log-entry">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-msg info">[System] Terminal initialized. Waiting for Tampermonkey logs from Facebook...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: Auto-Post Queue -->
+        <section id="tab-queue" class="tab-content">
+            <div class="queue-hero">
+                <div class="queue-hero-text">
+                    <h2>🚀 Auto-Post Queue Manager</h2>
+                    <p>When you click <strong>Launch Auto-Post on Facebook</strong>, our Tampermonkey automation reads this queue, auto-attaches up to 20 local cached photos, and fills all 16 Facebook fields in ~8 seconds per car.</p>
+                </div>
+                <div class="queue-actions">
+                    <button class="btn btn-emerald" id="btn-queue-start-direct">
+                        <span>⚡ Start Queue on Facebook Tab</span>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="btn-refresh-queue">
+                        <span>🔄 Refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Vehicle</th>
+                            <th>VIN / Stock</th>
+                            <th>Mileage</th>
+                            <th>Price</th>
+                            <th>Photos</th>
+                            <th>Quick Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queue-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 4: Sold Vehicles Alert -->
+        <section id="tab-sold" class="tab-content">
+            <div class="sold-hero">
+                <div>
+                    <h2>⚠️ Sold / Removed Vehicle Alerts</h2>
+                    <p>These vehicles were previously posted to Facebook Marketplace by you, but are <strong>no longer in Nucar Tilton's inventory</strong>. You should remove or mark them as sold on Facebook Marketplace to prevent leads on unavailable cars.</p>
+                </div>
+                <a href="https://www.facebook.com/marketplace/you/selling" target="_blank" class="btn btn-rose">
+                    <span>Manage FB Listings</span>
+                </a>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vehicle</th>
+                            <th>VIN</th>
+                            <th>Price When Posted</th>
+                            <th>Posted On</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sold-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 5: Configuration -->
+        <section id="tab-settings" class="tab-content">
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h3>📍 Facebook Marketplace Defaults</h3>
+                    <div class="form-group">
+                        <label class="form-label" for="setting-fb-location">Listing Location (City, State)</label>
+                        <input type="text" class="form-input" id="setting-fb-location" value="Tilton, New Hampshire" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="setting-max-images">Max Photos per Vehicle (up to 20)</label>
+                        <input type="number" class="form-input" id="setting-max-images" value="20" min="1" max="20" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-checkbox-label">
+                            <input type="checkbox" class="form-checkbox" id="setting-clean-title" checked />
+                            <span>Default "Clean Title" checkbox to Checked</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="setting-post-interval">Queue Delay Between Posts (seconds)</label>
+                        <input type="number" class="form-input" id="setting-post-interval" value="300" min="30" max="1800" />
+                        <span style="font-size:0.75rem; color:var(--text-dim);">Recommended: 180–300s to avoid Facebook spam detection flags</span>
+                    </div>
+
+                    <button class="btn btn-primary" id="btn-save-settings">
+                        <span>💾 Save Settings</span>
+                    </button>
+                </div>
+
+                <div class="settings-card">
+                    <h3>🏢 Dealership Scraper Configuration</h3>
+                    <div class="form-group">
+                        <label class="form-label" for="setting-store-location">Target Dealership Store</label>
+                        <input type="text" class="form-input" id="setting-store-location" value="Nucar Automall of Tilton" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">CarsCommerce Search API Status</label>
+                        <div style="background:var(--bg-input); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); font-size:0.8rem; color:var(--text-muted);">
+                            CCID: <strong>6051356</strong> (nucarnh.com)<br>
+                            Throughput: <strong>250 vehicles/batch</strong><br>
+                            Current Database: <strong id="setting-db-count">... vehicles</strong>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-secondary" id="btn-manual-sync">
+                        <span>🔄 Re-Fetch Full Inventory Now</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Vehicle Details Modal -->
+    <div class="modal-overlay" id="vehicle-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-title" style="font-family:'Outfit',sans-serif; font-size:1.3rem;">Vehicle Details</h2>
+                    <span id="modal-price" style="font-size:1.1rem; font-weight:700; color:#38bdf8;">$0</span>
+                </div>
+                <button class="modal-close" id="modal-close-btn">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Gallery -->
+                <div class="gallery-main" id="modal-gallery-main">
+                    <img id="modal-main-img" src="" alt="Vehicle Image" />
+                    <button class="gallery-nav-btn gallery-prev" id="gallery-prev-btn">&#10094;</button>
+                    <button class="gallery-nav-btn gallery-next" id="gallery-next-btn">&#10095;</button>
+                </div>
+                <div class="gallery-thumbs" id="modal-thumbs"></div>
+
+                <!-- Specifications -->
+                <div class="specs-grid" id="modal-specs"></div>
+
+                <!-- Description Preview -->
+                <div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                        <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">FACEBOOK MARKETPLACE DESCRIPTION</span>
+                        <button class="btn btn-secondary btn-sm" id="btn-copy-desc">📋 Copy Description</button>
+                    </div>
+                    <div class="desc-box" id="modal-desc"></div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary" id="modal-toggle-posted">Mark as Posted</button>
+                    <button class="btn btn-emerald" id="modal-post-on-fb">
+                        <span>⚡ Post on Facebook Now</span>
+                    </button>
+                    <a href="https://www.facebook.com/marketplace/create/vehicle" target="_blank" class="btn btn-primary">
+                        <span>🚀 Open in Facebook Creator</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tampermonkey Script Modal -->
+    <div class="modal-overlay" id="script-modal">
+        <div class="modal-card" style="max-width: 650px;">
+            <div class="modal-header">
+                <h2 style="font-family:'Outfit',sans-serif; font-size:1.25rem;">🧩 Tampermonkey Script Setup</h2>
+                <button class="modal-close" id="script-modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-muted); font-size:0.875rem;">
+                    The Tampermonkey script connects Facebook Marketplace directly to this local control center, auto-uploading photos and filling all vehicle specifications.
+                </p>
+
+                <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px;">
+                    <h4 style="margin-bottom:8px; font-size:0.95rem;">Quick 2-Step Installation:</h4>
+                    <ol style="margin-left:20px; font-size:0.85rem; color:var(--text-muted); line-height:1.7;">
+                        <li>Ensure the <strong>Tampermonkey</strong> extension is installed in Chrome or Edge.</li>
+                        <li>Click the button below to install or update the script directly:</li>
+                    </ol>
+                    <div style="margin-top:14px; display:flex; gap:10px;">
+                        <a href="/tampermonkey.user.js" target="_blank" class="btn btn-emerald">
+                            <span>📥 Install / Update Script (1-Click)</span>
+                        </a>
+                        <button class="btn btn-secondary" id="btn-copy-script-url">
+                            <span>🔗 Copy Script URL</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="font-size:0.8rem; color:var(--text-dim);">
+                    Script URL: <code style="color:#38bdf8;">http://127.0.0.1:5000/tampermonkey.user.js</code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
+    <script>
+        // ── APPLICATION STATE ──────────────────────────────────────────────────
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentVehicles = [];
+        let activeStatusFilter = 'all';
+        let currentSearch = '';
+        let currentModalVehicle = null;
+        let currentModalImgIdx = 0;
+        let searchTimeout = null;
+
+        // Bot Live Stream State
+        let lastLogId = 0;
+        let autoScroll = true;
+        let isBotConnected = false;
+
+        // ── TOAST HELPER ───────────────────────────────────────────────────────
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { info: 'ℹ️', success: '✅', error: '❌' };
+            toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // ── REMOTE BOT COMMANDS ───────────────────────────────────────────────
+        async function sendBotCommand(type, extra = {}) {
+            try {
+                const res = await fetch('/api/bot/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, ...extra })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`Dispatched command: ${type}`, 'success');
+                } else {
+                    showToast(`Command error: ${data.error}`, 'error');
+                }
+            } catch (err) {
+                showToast(`Failed: ${err.message}`, 'error');
+            }
+        }
+
+        async function triggerBotFill(vin) {
+            const v = currentVehicles.find(item => item.vin === vin);
+            const title = v ? `${v.year} ${v.make} ${v.model}` : vin;
+            showToast(`🚀 Sending "${title}" to Facebook tab...`, 'info');
+            await sendBotCommand('FILL_VEHICLE', { vin });
+        }
+
+        // ── LIVE BOT STREAM & LOG POLLING ──────────────────────────────────────
+        async function pollBotStatusAndLogs() {
+            try {
+                const res = await fetch(`/api/bot/logs?since_id=${lastLogId}`);
+                const data = await res.json();
+
+                isBotConnected = data.connected;
+
+                // 1. Update Header Bot Status Pill
+                const pill = document.getElementById('bot-status-pill');
+                const pulse = document.getElementById('bot-pulse');
+                const text = document.getElementById('bot-status-text');
+                const liveBadge = document.getElementById('tab-badge-bot-live');
+
+                if (data.connected) {
+                    pill.style.background = 'rgba(16, 185, 129, 0.12)';
+                    pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                    pill.style.color = '#34d399';
+                    pulse.style.backgroundColor = '#34d399';
+                    pulse.style.boxShadow = '0 0 8px #34d399';
+                    pulse.classList.add('status-pulse');
+                    text.textContent = '🟢 FB Bot Active';
+
+                    if (liveBadge) {
+                        const st = (data.bot_state.status || 'Active').toUpperCase();
+                        liveBadge.textContent = st;
+                        liveBadge.style.background = '#10b981';
+                        liveBadge.style.color = '#fff';
+                    }
+                } else {
+                    pill.style.background = 'rgba(255, 255, 255, 0.06)';
+                    pill.style.borderColor = 'var(--border)';
+                    pill.style.color = 'var(--text-muted)';
+                    pulse.style.backgroundColor = '#64748b';
+                    pulse.style.boxShadow = 'none';
+                    pulse.classList.remove('status-pulse');
+                    text.textContent = '⚪ FB Bot Offline';
+
+                    if (liveBadge) {
+                        liveBadge.textContent = 'Offline';
+                        liveBadge.style.background = 'rgba(255, 255, 255, 0.1)';
+                        liveBadge.style.color = 'var(--text-dim)';
+                    }
+                }
+
+                // 2. Update Live Step & Progress
+                if (data.bot_state) {
+                    const bs = data.bot_state;
+                    const stepEl = document.getElementById('bot-live-step-text');
+                    const pctEl = document.getElementById('bot-live-pct-text');
+                    const barEl = document.getElementById('bot-live-progress-fill');
+                    const statusLbl = document.getElementById('bot-live-status-lbl');
+                    const vehicleTitle = document.getElementById('bot-active-vehicle-title');
+
+                    if (stepEl && bs.current_step) stepEl.textContent = bs.current_step;
+                    const pct = Math.round(bs.progress || 0);
+                    if (pctEl) pctEl.textContent = `${pct}%`;
+                    if (barEl) barEl.style.width = `${pct}%`;
+
+                    if (bs.current_vehicle) {
+                        const cv = bs.current_vehicle;
+                        if (vehicleTitle) vehicleTitle.innerHTML = `Active Car: <strong style="color:#fff;">${cv.title}</strong> · Price: $${(cv.price || 0).toLocaleString()}`;
+                    } else if (!data.connected) {
+                        if (vehicleTitle) vehicleTitle.innerHTML = `Status: <span style="color:#94a3b8;">Offline — Please open Facebook Marketplace in your browser</span>`;
+                    } else {
+                        if (vehicleTitle) vehicleTitle.innerHTML = `Status: <span style="color:#34d399;">Ready on Facebook — Select a vehicle or start queue</span>`;
+                    }
+
+                    if (statusLbl && bs.status) {
+                        statusLbl.textContent = bs.status.toUpperCase();
+                    }
+                }
+
+                // 3. Append New Logs to Terminal
+                if (data.logs && data.logs.length > 0) {
+                    const logBox = document.getElementById('terminal-logs-container');
+                    data.logs.forEach(log => {
+                        const entry = document.createElement('div');
+                        entry.className = 'log-entry';
+                        entry.innerHTML = `
+                            <span class="log-time">${log.time}</span>
+                            <span class="log-msg ${log.level}">${log.message}</span>
+                        `;
+                        logBox.appendChild(entry);
+                        lastLogId = Math.max(lastLogId, log.id);
+                    });
+
+                    if (autoScroll) {
+                        logBox.scrollTop = logBox.scrollHeight;
+                    }
+                }
+            } catch (err) {
+                // Background poll silent
+            }
+        }
+
+        // ── LOAD STATS ────────────────────────────────────────────────────────
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('kpi-total').textContent = (data.total_inventory || 0).toLocaleString();
+                document.getElementById('kpi-posted').textContent = (data.total_posted || 0).toLocaleString();
+                document.getElementById('kpi-unposted').textContent = (data.total_unposted || 0).toLocaleString();
+                document.getElementById('kpi-sold').textContent = (data.total_sold || 0).toLocaleString();
+
+                document.getElementById('tab-badge-inventory').textContent = data.total_inventory || 0;
+                document.getElementById('tab-badge-queue').textContent = data.total_unposted || 0;
+                document.getElementById('tab-badge-sold').textContent = data.total_sold || 0;
+                document.getElementById('setting-db-count').textContent = `${data.total_inventory || 0} vehicles`;
+            } catch (err) {
+                console.error('Failed to load stats:', err);
+            }
+        }
+
+        // ── LOAD VEHICLES ─────────────────────────────────────────────────────
+        async function loadVehicles() {
+            const container = document.getElementById('vehicles-container');
+            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);"><span class="spinner"></span> Loading vehicles...</div>';
+
+            const bodyStyle = document.getElementById('filter-body-style').value;
+            const sort = document.getElementById('filter-sort').value;
+
+            const params = new URLSearchParams({
+                page: currentPage,
+                per_page: 24,
+                search: currentSearch,
+                status: activeStatusFilter,
+                body_style: bodyStyle,
+                sort: sort
+            });
+
+            try {
+                const res = await fetch(`/api/vehicles?${params.toString()}`);
+                const data = await res.json();
+                currentVehicles = data.vehicles || [];
+                totalPages = data.total_pages || 1;
+
+                document.getElementById('pagination-info').textContent = `Page ${currentPage} of ${totalPages} (${data.total} total)`;
+                document.getElementById('btn-prev-page').disabled = currentPage <= 1;
+                document.getElementById('btn-next-page').disabled = currentPage >= totalPages;
+
+                renderVehicles();
+            } catch (err) {
+                container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--rose);">❌ Failed to load vehicles: ${err.message}</div>`;
+            }
+        }
+
+        function renderVehicles() {
+            const container = document.getElementById('vehicles-container');
+            if (currentVehicles.length === 0) {
+                container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:var(--text-muted);">No vehicles match your search or filter.</div>';
+                return;
+            }
+
+            container.innerHTML = currentVehicles.map(v => {
+                const statusBadge = v.posted
+                    ? '<span class="badge-status badge-posted">✅ Posted</span>'
+                    : '<span class="badge-status badge-unposted">📦 Unposted</span>';
+
+                const thumb = v.thumbnail
+                    ? `/api/proxy-image?url=${encodeURIComponent(v.thumbnail)}`
+                    : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="190"><rect fill="%231a202c" width="320" height="190"/><text fill="%23718096" x="110" y="100" font-family="sans-serif" font-size="14">No Photo</text></svg>';
+
+                return `
+                    <div class="vehicle-card" data-vin="${v.vin}">
+                        <div class="card-image-wrap">
+                            ${statusBadge}
+                            <span class="badge-photos">📷 ${v.image_count || 0}</span>
+                            <img src="${thumb}" alt="${v.year} ${v.make} ${v.model}" loading="lazy" />
+                        </div>
+                        <div class="card-body">
+                            <div class="card-title-row">
+                                <div class="card-title">${v.year} ${v.make} ${v.model} ${v.trim || ''}</div>
+                                <div class="card-price">$${(v.price || 0).toLocaleString()}</div>
+                            </div>
+                            <div class="card-meta-chips">
+                                <span class="meta-chip">VIN: ${v.vin ? v.vin.slice(-6) : 'N/A'}</span>
+                                <span class="meta-chip">${(v.mileage || 0).toLocaleString()} mi</span>
+                                <span class="meta-chip">${v.body_style || v.body_type || 'Car'}</span>
+                                <span class="meta-chip">${v.exterior_color || 'Color N/A'}</span>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-secondary btn-sm" onclick="openVehicleModal('${v.vin}')" title="View specs & photo gallery">
+                                    👁️ Details
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="triggerBotFill('${v.vin}')" title="Send to Facebook tab now">
+                                    ⚡ Post on FB
+                                </button>
+                                <button class="btn ${v.posted ? 'btn-rose' : 'btn-emerald'} btn-sm" onclick="toggleVehiclePosted('${v.vin}')" title="Toggle marked status">
+                                    ${v.posted ? 'Unmark' : 'Done'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ── TOGGLE POSTED STATUS ──────────────────────────────────────────────
+        async function toggleVehiclePosted(vin) {
+            const v = currentVehicles.find(item => item.vin === vin);
+            if (!v) return;
+
+            const isCurrentlyPosted = v.posted;
+            const endpoint = isCurrentlyPosted ? '/api/unmark-posted' : '/api/track-posted';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vin: v.vin,
+                        title: `${v.year} ${v.make} ${v.model}`,
+                        price: v.price
+                    })
+                });
+
+                if (res.ok) {
+                    showToast(isCurrentlyPosted ? `Unmarked ${v.year} ${v.make}` : `Marked ${v.year} ${v.make} as Posted!`, 'success');
+                    await loadStats();
+                    await loadVehicles();
+                    if (currentModalVehicle && currentModalVehicle.vin === vin) {
+                        currentModalVehicle.posted = !isCurrentlyPosted;
+                        updateModalPostedBtn();
+                    }
+                }
+            } catch (err) {
+                showToast(`Failed: ${err.message}`, 'error');
+            }
+        }
+
+        // ── MODAL VIEWER ───────────────────────────────────────────────────────
+        async function openVehicleModal(vin) {
+            const res = await fetch(`/api/vehicle/${vin}`);
+            const v = await res.json();
+            currentModalVehicle = v;
+            currentModalImgIdx = 0;
+
+            document.getElementById('modal-title').textContent = `${v.year} ${v.make} ${v.model} ${v.trim || ''}`;
+            document.getElementById('modal-price').textContent = `$${(v.price || 0).toLocaleString()}`;
+            document.getElementById('modal-desc').textContent = v.description || 'No description available.';
+
+            // Specs
+            document.getElementById('modal-specs').innerHTML = `
+                <div class="spec-item"><div class="spec-label">VIN</div><div class="spec-value">${v.vin || 'N/A'}</div></div>
+                <div class="spec-item"><div class="spec-label">Stock #</div><div class="spec-value">${v.stock || 'N/A'}</div></div>
+                <div class="spec-item"><div class="spec-label">Mileage</div><div class="spec-value">${(v.mileage || 0).toLocaleString()} miles</div></div>
+                <div class="spec-item"><div class="spec-label">Body Style</div><div class="spec-value">${v.body_style || v.body_type || 'N/A'}</div></div>
+                <div class="spec-item"><div class="spec-label">Exterior Color</div><div class="spec-value">${v.exterior_color || v.raw_exterior_color || 'N/A'}</div></div>
+                <div class="spec-item"><div class="spec-label">Transmission</div><div class="spec-value">${v.transmission || v.raw_transmission || 'N/A'}</div></div>
+                <div class="spec-item"><div class="spec-label">Fuel Type</div><div class="spec-value">${v.fuel_type || v.raw_fuel_type || 'Gasoline'}</div></div>
+                <div class="spec-item"><div class="spec-label">Condition</div><div class="spec-value">${v.condition || 'Used'}</div></div>
+            `;
+
+            updateModalGallery();
+            updateModalPostedBtn();
+
+            document.getElementById('vehicle-modal').classList.add('open');
+        }
+
+        function updateModalGallery() {
+            const v = currentModalVehicle;
+            const images = v.images || [];
+            const mainImg = document.getElementById('modal-main-img');
+            const thumbsContainer = document.getElementById('modal-thumbs');
+
+            if (images.length === 0) {
+                mainImg.src = '';
+                thumbsContainer.innerHTML = '<span style="color:var(--text-dim); font-size:0.8rem;">No images available</span>';
+                return;
+            }
+
+            const activeUrl = images[currentModalImgIdx];
+            mainImg.src = `/api/proxy-image?url=${encodeURIComponent(activeUrl)}`;
+
+            thumbsContainer.innerHTML = images.map((img, idx) => `
+                <img src="/api/proxy-image?url=${encodeURIComponent(img)}" 
+                     class="gallery-thumb ${idx === currentModalImgIdx ? 'active' : ''}" 
+                     onclick="setModalImg(${idx})" />
+            `).join('');
+        }
+
+        function setModalImg(idx) {
+            currentModalImgIdx = idx;
+            updateModalGallery();
+        }
+
+        function updateModalPostedBtn() {
+            const btn = document.getElementById('modal-toggle-posted');
+            if (!currentModalVehicle) return;
+            if (currentModalVehicle.posted) {
+                btn.className = 'btn btn-rose';
+                btn.textContent = 'Unmark as Posted';
+            } else {
+                btn.className = 'btn btn-emerald';
+                btn.textContent = '✅ Mark as Posted';
+            }
+        }
+
+        // ── QUEUE VIEW ────────────────────────────────────────────────────────
+        async function loadQueueView() {
+            const tbody = document.getElementById('queue-table-body');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;"><span class="spinner"></span> Loading queue...</td></tr>';
+
+            try {
+                const res = await fetch('/api/queue?per_page=100');
+                const data = await res.json();
+                const vehicles = data.vehicles || [];
+
+                if (vehicles.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--emerald);">🎉 All vehicles have been posted! No pending items in queue.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = vehicles.map((v, i) => {
+                    const thumb = v.thumbnail
+                        ? `/api/proxy-image?url=${encodeURIComponent(v.thumbnail)}`
+                        : '';
+
+                    return `
+                        <tr>
+                            <td><strong>${i + 1}</strong></td>
+                            <td>
+                                <div class="table-vehicle-info">
+                                    <img src="${thumb}" class="table-thumb" alt="" onerror="this.style.display='none'" />
+                                    <div>
+                                        <strong>${v.year} ${v.make} ${v.model}</strong>
+                                        <div style="font-size:0.75rem; color:var(--text-dim);">${v.trim || ''}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><code>${v.vin ? v.vin.slice(-8) : ''}</code> / ${v.stock || ''}</td>
+                            <td>${(v.mileage || 0).toLocaleString()} mi</td>
+                            <td><strong>$${(v.price || 0).toLocaleString()}</strong></td>
+                            <td>📷 ${v.image_count || 0}</td>
+                            <td>
+                                <div style="display:flex; gap:6px;">
+                                    <button class="btn btn-primary btn-sm" onclick="triggerBotFill('${v.vin}')">
+                                        ⚡ Post Now
+                                    </button>
+                                    <button class="btn btn-emerald btn-sm" onclick="toggleVehiclePosted('${v.vin}')">
+                                        Done
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="7" style="color:var(--rose);">Error loading queue: ${err.message}</td></tr>`;
+            }
+        }
+
+        // ── SOLD VIEW ─────────────────────────────────────────────────────────
+        async function loadSoldView() {
+            const tbody = document.getElementById('sold-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px;"><span class="spinner"></span> Checking sold inventory...</td></tr>';
+
+            try {
+                const res = await fetch('/api/sold');
+                const data = await res.json();
+                const sold = data.vehicles || [];
+
+                if (sold.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--emerald);">✅ No sold vehicles detected. All Facebook listings match active inventory!</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = sold.map(item => `
+                    <tr>
+                        <td><strong>${item.title || 'Vehicle'}</strong></td>
+                        <td><code>${item.vin}</code></td>
+                        <td>$${(item.price || 0).toLocaleString()}</td>
+                        <td>${item.posted_at ? new Date(item.posted_at).toLocaleDateString() : 'Recently'}</td>
+                        <td>
+                            <button class="btn btn-rose btn-sm" onclick="removeSoldRecord('${item.vin}')">
+                                🗑️ Mark Removed from FB
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" style="color:var(--rose);">Error: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function removeSoldRecord(vin) {
+            try {
+                const res = await fetch('/api/unmark-posted', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vin })
+                });
+                if (res.ok) {
+                    showToast('Removed from tracking database', 'success');
+                    await loadStats();
+                    await loadSoldView();
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, 'error');
+            }
+        }
+
+        // ── LIVE INVENTORY SYNC ───────────────────────────────────────────────
+        async function triggerInventorySync() {
+            const btn = document.getElementById('btn-sync-inventory');
+            const spinner = document.getElementById('sync-spinner');
+            const icon = document.getElementById('sync-icon');
+            const text = document.getElementById('sync-btn-text');
+
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+            text.textContent = 'Syncing...';
+            btn.disabled = true;
+
+            showToast('Fetching latest live inventory from CarsCommerce API...', 'info');
+
+            try {
+                const res = await fetch('/api/sync', { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`✅ Sync successful! Loaded ${data.count || 0} vehicles.`, 'success');
+                    await loadStats();
+                    await loadVehicles();
+                } else {
+                    showToast(`❌ Sync failed: ${data.error}`, 'error');
+                }
+            } catch (err) {
+                showToast(`Sync error: ${err.message}`, 'error');
+            } finally {
+                spinner.style.display = 'none';
+                icon.style.display = 'inline';
+                text.textContent = 'Sync Live';
+                btn.disabled = false;
+            }
+        }
+
+        // ── CONFIGURATION SAVE / LOAD ─────────────────────────────────────────
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const cfg = await res.json();
+                if (cfg.fb_location) document.getElementById('setting-fb-location').value = cfg.fb_location;
+                if (cfg.max_images) document.getElementById('setting-max-images').value = cfg.max_images;
+                if (cfg.clean_title !== undefined) document.getElementById('setting-clean-title').checked = cfg.clean_title;
+                if (cfg.post_interval_seconds) document.getElementById('setting-post-interval').value = cfg.post_interval_seconds;
+                if (cfg.dealer_store_name) document.getElementById('setting-store-location').value = cfg.dealer_store_name;
+            } catch (e) {
+                console.warn('Config not loaded:', e);
+            }
+        }
+
+        async function saveConfig() {
+            const cfg = {
+                fb_location: document.getElementById('setting-fb-location').value,
+                max_images: parseInt(document.getElementById('setting-max-images').value, 10) || 20,
+                clean_title: document.getElementById('setting-clean-title').checked,
+                post_interval_seconds: parseInt(document.getElementById('setting-post-interval').value, 10) || 300,
+                dealer_store_name: document.getElementById('setting-store-location').value
+            };
+
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cfg)
+                });
+                if (res.ok) {
+                    showToast('Configuration saved successfully!', 'success');
+                }
+            } catch (e) {
+                showToast(`Failed to save settings: ${e.message}`, 'error');
+            }
+        }
+
+        // ── INITIALIZATION & EVENT LISTENERS ──────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadVehicles();
+            loadConfig();
+
+            // Start polling bot status & live logs every 1.5 seconds
+            pollBotStatusAndLogs();
+            setInterval(pollBotStatusAndLogs, 1500);
+
+            // Tab switching
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                    btn.classList.add('active');
+                    const tabId = btn.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+
+                    if (tabId === 'tab-queue') loadQueueView();
+                    if (tabId === 'tab-sold') loadSoldView();
+                });
+            });
+
+            // Remote Bot Control Buttons
+            document.getElementById('btn-bot-start-queue').addEventListener('click', () => {
+                sendBotCommand('START_QUEUE');
+            });
+            document.getElementById('btn-queue-start-direct').addEventListener('click', () => {
+                sendBotCommand('START_QUEUE');
+            });
+            document.getElementById('btn-bot-next-vehicle').addEventListener('click', () => {
+                sendBotCommand('NEXT_VEHICLE');
+            });
+            document.getElementById('btn-bot-stop-queue').addEventListener('click', () => {
+                sendBotCommand('STOP_QUEUE');
+            });
+
+            // Terminal controls
+            document.getElementById('btn-clear-terminal').addEventListener('click', async () => {
+                document.getElementById('terminal-logs-container').innerHTML = '';
+                await fetch('/api/bot/clear-logs', { method: 'POST' });
+            });
+
+            document.getElementById('btn-toggle-autoscroll').addEventListener('click', (e) => {
+                autoScroll = !autoScroll;
+                e.target.textContent = `Auto-scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+            });
+
+            // Status filter buttons
+            document.querySelectorAll('.segmented-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.segmented-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    activeStatusFilter = btn.getAttribute('data-status');
+                    currentPage = 1;
+                    loadVehicles();
+                });
+            });
+
+            // Search input
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                currentSearch = e.target.value.trim();
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentPage = 1;
+                    loadVehicles();
+                }, 350);
+            });
+
+            // Filter dropdowns
+            document.getElementById('filter-body-style').addEventListener('change', () => {
+                currentPage = 1;
+                loadVehicles();
+            });
+
+            document.getElementById('filter-sort').addEventListener('change', () => {
+                currentPage = 1;
+                loadVehicles();
+            });
+
+            // Pagination
+            document.getElementById('btn-prev-page').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadVehicles();
+                }
+            });
+
+            document.getElementById('btn-next-page').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadVehicles();
+                }
+            });
+
+            // Sync buttons
+            document.getElementById('btn-sync-inventory').addEventListener('click', triggerInventorySync);
+            document.getElementById('btn-manual-sync').addEventListener('click', triggerInventorySync);
+            document.getElementById('btn-refresh-queue').addEventListener('click', loadQueueView);
+
+            // Settings save
+            document.getElementById('btn-save-settings').addEventListener('click', saveConfig);
+
+            // Modal gallery nav
+            document.getElementById('gallery-prev-btn').addEventListener('click', () => {
+                if (!currentModalVehicle || !currentModalVehicle.images) return;
+                const total = currentModalVehicle.images.length;
+                currentModalImgIdx = (currentModalImgIdx - 1 + total) % total;
+                updateModalGallery();
+            });
+
+            document.getElementById('gallery-next-btn').addEventListener('click', () => {
+                if (!currentModalVehicle || !currentModalVehicle.images) return;
+                const total = currentModalVehicle.images.length;
+                currentModalImgIdx = (currentModalImgIdx + 1) % total;
+                updateModalGallery();
+            });
+
+            // Modal close
+            document.getElementById('modal-close-btn').addEventListener('click', () => {
+                document.getElementById('vehicle-modal').classList.remove('open');
+            });
+            document.getElementById('vehicle-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'vehicle-modal') {
+                    document.getElementById('vehicle-modal').classList.remove('open');
+                }
+            });
+
+            // Copy Description
+            document.getElementById('btn-copy-desc').addEventListener('click', () => {
+                const desc = document.getElementById('modal-desc').textContent;
+                navigator.clipboard.writeText(desc).then(() => {
+                    showToast('Description copied to clipboard!', 'success');
+                });
+            });
+
+            // Modal action buttons
+            document.getElementById('modal-toggle-posted').addEventListener('click', () => {
+                if (currentModalVehicle) {
+                    toggleVehiclePosted(currentModalVehicle.vin);
+                }
+            });
+
+            document.getElementById('modal-post-on-fb').addEventListener('click', () => {
+                if (currentModalVehicle) {
+                    triggerBotFill(currentModalVehicle.vin);
+                }
+            });
+
+            // Script Modal
+            document.getElementById('btn-script-modal').addEventListener('click', () => {
+                document.getElementById('script-modal').classList.add('open');
+            });
+            document.getElementById('script-modal-close-btn').addEventListener('click', () => {
+                document.getElementById('script-modal').classList.remove('open');
+            });
+            document.getElementById('btn-copy-script-url').addEventListener('click', () => {
+                navigator.clipboard.writeText('http://127.0.0.1:5000/tampermonkey.user.js').then(() => {
+                    showToast('Script URL copied to clipboard!', 'success');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
